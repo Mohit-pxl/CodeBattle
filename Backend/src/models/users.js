@@ -4,7 +4,7 @@ const {Schema}=mongoose
 const UserSchema=new Schema({
     firstName:{
         type:String,
-        require:true,
+        required:true,
         minLength:3,
         maxLength:20
     },
@@ -15,8 +15,8 @@ const UserSchema=new Schema({
 
     },
     emailId:{
-        type:string,
-        require:true,
+        type:String,
+        required:true,
         unique:true,
         trim:true,
         lowercase:true,
@@ -28,15 +28,20 @@ const UserSchema=new Schema({
         max:80,
     },
     role:{
-        type:string,
+        type:String,
         enum:["user","admin"],
         default:"user"
 
     },
     problemSolved:{
-        type:[string]
+        type:[String]
 
+    },
+    password:{
+        type:String,
+        required:true
     }
+
 },{
     timestamps:true
 })
