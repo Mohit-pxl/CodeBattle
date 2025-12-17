@@ -2,6 +2,7 @@ const validate=require('../utils/validator')
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/users');
+const redisClient = require('../config/redis');
 
 const register=async (req,res)=>{
     try{

@@ -78,8 +78,8 @@ const problemSchema=new Schema({
     ],
 
     problemCreator:{
-        type:Object.Types.ObjectId,
-        ref:'user',
+        type:Schema.Types.ObjectId,
+        ref:'User',
         required:true
     }
 
@@ -87,4 +87,4 @@ const problemSchema=new Schema({
 
 const Problem=mongoose.model("problem",problemSchema);
 
-module.exports=problemSchema;
+module.exports=Problem;
