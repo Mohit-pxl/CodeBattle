@@ -17,7 +17,7 @@ const problemSchema=new Schema({
 
     },
      tags:{
-        type:String,
+        type:[String],
         enum:['array','linkedList','graph','dp'],
         required:true
     },
@@ -78,13 +78,13 @@ const problemSchema=new Schema({
     ],
 
     problemCreator:{
-        type:Object.Types.ObjectId,
+        type:mongoose.Types.ObjectId,
         ref:'user',
         required:true
     }
 
 })
 
-const Problem=mongoose.model("problem",problemSchema);
+const Problem=mongoose.model("Problem",problemSchema);
 
-module.exports=problemSchema;
+module.exports=Problem;

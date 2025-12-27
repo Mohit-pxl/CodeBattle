@@ -1,4 +1,4 @@
-const problem=require('../models/problem')
+const Problem=require('../models/problem')
 const {getLanguageById,submitBatch,submitToken}=require('../utils/problemUtility')
 
 
@@ -66,6 +66,7 @@ const createProblem = async (req,res)=>{
 }
 
 const updateProblem=async(req,res)=>{
+    const {id} = req.params;
 
     const {title,description,difficulty,tags,
         visibleTestCases,hiddenTestCases,startCode,
@@ -113,7 +114,7 @@ const updateProblem=async(req,res)=>{
 
       }
 
-      const newProblem= await findByIdAndUpdate(id,{...req.body},{runValidators:true,new:true})
+      const newProblem= await Problem.findByIdAndUpdate(id,{...req.body},{runValidators:true,new:true})
       res.status(200).send(newProblem)
 
     }
@@ -154,8 +155,8 @@ const getProblemById = async(req,res)=>{
     if(!id)
       return res.status(400).send("ID is Missing");
 
-    const getProblem = await Problem.findById(id);
-
+    const getProblem = await Problem.findById(id).select('_id title description difficulty tags visibleTestCases startCode referenceSolution ');
+   
    if(!getProblem)
     return res.status(404).send("Problem is Missing");
 
@@ -171,7 +172,7 @@ const getAllProblem = async(req,res)=>{
 
   try{
      
-    const getProblem = await Problem.find({});
+    const getProblem = await Problem.find({}).select('_id title difficulty tags');
 
    if(getProblem.length==0)
     return res.status(404).send("Problem is Missing");
@@ -183,8 +184,5 @@ const getAllProblem = async(req,res)=>{
     res.status(500).send("Error: "+err);
   }
 }
-
-
-
 
 module.exports={createProblem,updateProblem,deleteProblem,getProblemById,getAllProblem}

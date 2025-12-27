@@ -17,13 +17,12 @@ const submitBatch= async (submissions)=>{
 
 const options = {
   method: 'POST',
-  url: 'https://judge0-ce.p.rapidapi.com/submissions/batch',
+  url: 'http://localhost:2358/submissions/batch',
    params: {
     base64_encoded: 'false'
   },
   headers: {
-    'x-rapidapi-key': 'f1adabdbcamsh336384f4b33058ep11adb4jsn8b0cd55819ac',
-    'x-rapidapi-host': 'judge0-ce.p.rapidapi.com',
+    
     'Content-Type': 'application/json'
   },
   data: {
@@ -44,25 +43,22 @@ async function fetchData() {
 return fetchData();
 }
 
-const waiting = async(timer)=>{
-  setTimeout(()=>{
-    return 1;
-  },timer);
-}
+const waiting = (timer) => {
+  return new Promise(resolve => setTimeout(resolve, timer));
+};
 
 const submitToken = async(resultToken)=>{
 
 const options = {
   method: 'GET',
-  url: 'https://judge0-ce.p.rapidapi.com/submissions/batch',
+  url: 'http://localhost:2358/submissions/batch',
   params: {
     tokens: resultToken.join(","),
     base64_encoded: 'false',
     fields: '*'
   },
   headers: {
-    'x-rapidapi-key': 'f1adabdbcamsh336384f4b33058ep11adb4jsn8b0cd55819ac',
-    'x-rapidapi-host': 'judge0-ce.p.rapidapi.com'
+    "Content-Type": "application/json"
   }
 };
 
@@ -92,4 +88,4 @@ async function fetchData() {
 
 }
 
-module.exports={getLanguageById,submitBatch};
+module.exports={getLanguageById,submitBatch,submitToken};
