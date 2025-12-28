@@ -78,7 +78,7 @@ const problemSchema=new Schema({
     ],
 
     problemCreator:{
-        type:mongoose.Types.ObjectId,
+        type:Schema.Types.ObjectId,
         ref:'user',
         required:true
     }

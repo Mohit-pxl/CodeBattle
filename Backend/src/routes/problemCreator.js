@@ -1,5 +1,5 @@
 const express = require('express');
-const {createProblem,updateProblem,deleteProblem,getProblemById,getAllProblem}=require('../controllers/userProblem')
+const {createProblem,updateProblem,deleteProblem,getProblemById,getAllProblem,solvedAllProblembyUser}=require('../controllers/userProblem')
 const adminMiddleware = require('../middleware/adminMiddleware');
 const userMiddleware=require('../middleware/userMiddleware')
 
