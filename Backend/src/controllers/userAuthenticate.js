@@ -1,3 +1,4 @@
+const redisClient=require('../config/redis')
 const validate=require('../utils/validator')
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -98,4 +99,26 @@ const adminRegister = async(req,res)=>{
     }
 }
 
-module.exports={register,login,logout,adminRegister};
+const deleteProfile=async(req,res)=>{
+    try{
+    const userId=req.result._id
+
+     //userSchema delete
+     await User.findByIdAndDelete(userId)
+
+      // Submission se bhi delete karo...
+    
+      // await Submission.deleteMany({userId});
+      res.status(200).send("Deleted Sucessfully");
+
+    }
+    catch(err){
+
+        res.status(500).send("Internal Server Error");
+    }
+    
+
+
+}
+
+module.exports={register,login,logout,adminRegister,deleteProfile};
