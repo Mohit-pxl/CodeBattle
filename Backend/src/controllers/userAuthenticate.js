@@ -61,6 +61,9 @@ catch(err){
 const logout=async (req,res)=>{
    try{
         const {token} = req.cookies;
+        if (!token)
+            return res.status(400).send("No token found");
+
         const payload = jwt.decode(token);
 
         await redisClient.set(`token:${token}`,'Blocked');
@@ -69,6 +72,7 @@ const logout=async (req,res)=>{
     //    Cookies ko clear kar dena.....
 
     res.cookie("token",null,{expires: new Date(Date.now())});
+    //res.clearCookie("token");
     res.send("Logged Out Succesfully");
 
     }

@@ -16,7 +16,7 @@ const validate=(data)=>{
         throw new Error("Invalid Email")
     }
 
-    if(!+validator.isStrongPassword(data.password)){
+    if(!validator.isStrongPassword(data.password)){
         throw new Error("week password")
     }
 
