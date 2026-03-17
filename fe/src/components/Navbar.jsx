@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Terminal, Activity, Menu, X, User, LogOut, ChevronDown, Settings, Shield } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Activity, Menu, X, User, LogOut, ChevronDown, Settings, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector, useDispatch } from "react-redux";
+import { logoutUser } from "../authSlice";
+import codeBattleLogo from "../assets/file_0000000054cc71fa9401d452ca99cb03.png";
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const { user, logout } = useAuth();
     const [profileOpen, setProfileOpen] = useState(false);
     const location = useLocation();
+
+    const dispatch = useDispatch();
+
+    const { user, isAuthenticated } = useSelector((state) => state.auth);
+    console.log("AUTH STATE:", { user, isAuthenticated });
+
+    const logout = () => {
+  dispatch(logoutUser());
+    };
 
     // Close mobile menu on route change
     useEffect(() => {
@@ -41,10 +51,10 @@ export default function Navbar() {
             }}
         >
             <Link to="/" className="flex items-center gap-3">
-                <Terminal
-                    color="#E63946"
-                    size={32}
-                    style={{ filter: 'drop-shadow(0 0 8px rgba(230, 57, 70, 0.5))' }}
+                <img
+                    src={codeBattleLogo}
+                    alt="CodeBattle"
+                    className="h-12 w-auto object-contain sm:h-14"
                 />
                 <span
                     className="text-[1.6rem] font-extrabold tracking-widest uppercase"
@@ -74,7 +84,7 @@ export default function Navbar() {
 
             {/* Desktop Auth */}
             <div className="hidden lg:flex gap-6 items-center">
-                {user?.isLoggedIn ? (
+                {isAuthenticated ? (
                     <div className="relative">
                         <button
                             onClick={() => setProfileOpen(!profileOpen)}
@@ -159,7 +169,7 @@ export default function Navbar() {
                     <div className="h-px w-full bg-white/10"></div>
 
                     <div className="flex flex-col gap-4">
-                        {user?.isLoggedIn ? (
+                        {isAuthenticated  ? (
                             <>
                                 {user.role === 'admin' && (
                                     <Link to="/admin" className="hover:text-white text-left font-semibold text-[var(--color-slate)]">Admin Dashboard</Link>

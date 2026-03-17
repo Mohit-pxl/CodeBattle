@@ -1,15 +1,44 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import { Terminal } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {z} from 'zod';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, NavLink } from 'react-router';
+import { registerUser } from '../authSlice';
+
+const signupSchema = z.object({
+    firstName: z.string().min(2, "Minimum character should be 3"),
+    emailId: z.string().email("Invalid Email"),
+    password: z.string().min(8, "Password is too weak")
+  });
+  
+
 
 export default function SignupPage() {
-    const { register, handleSubmit, formState: { errors } } = useForm();
+    const [showPassword, setShowPassword] = useState(false);
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { isAuthenticated, loading } = useSelector((state) => state.auth); // Removed error as it wasn't used
 
-    const onSubmit = (data) => {
-        console.log("Signup Data:", data);
-        // Add signup logic here
+    const {
+     register,
+     handleSubmit,
+     formState: { errors },
+    } = useForm({ resolver: zodResolver(signupSchema) });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = (data) => {
+    console.log("FORM DATA:", data);
+    dispatch(registerUser(data));
     };
 
     return (
@@ -31,27 +60,21 @@ export default function SignupPage() {
                     <div className="flex flex-col items-start gap-1">
                         <input
                             type="text"
-                            placeholder="Username"
-                            className={`input-field w-full ${errors.username ? 'border-red-500' : ''}`}
-                            {...register("username", { required: "Username is required" })}
+                            placeholder="firstName"
+                            className={`input-field w-full ${errors.firstName ? 'border-red-500' : ''}`}
+                            {...register("firstName")}
                         />
-                        {errors.username && <span className="text-red-500 text-xs ml-1">{errors.username.message}</span>}
+                        {errors.firstName && <span className="text-red-500 text-xs ml-1">{errors.firstName.message}</span>}
                     </div>
 
                     <div className="flex flex-col items-start gap-1">
                         <input
                             type="email"
                             placeholder="Email Address"
-                            className={`input-field w-full ${errors.email ? 'border-red-500' : ''}`}
-                            {...register("email", {
-                                required: "Email is required",
-                                pattern: {
-                                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                    message: "Invalid email address"
-                                }
-                            })}
+                            className={`input-field w-full ${errors.emailId ? 'border-red-500' : ''}`}
+                            {...register("emailId")}
                         />
-                        {errors.email && <span className="text-red-500 text-xs ml-1">{errors.email.message}</span>}
+                        {errors.emailId && <span className="text-red-500 text-xs ml-1">{errors.emailId.message}</span>}
                     </div>
 
                     <div className="flex flex-col items-start gap-1">
@@ -59,19 +82,13 @@ export default function SignupPage() {
                             type="password"
                             placeholder="Password"
                             className={`input-field w-full ${errors.password ? 'border-red-500' : ''}`}
-                            {...register("password", {
-                                required: "Password is required",
-                                minLength: {
-                                    value: 6,
-                                    message: "Password must be at least 6 characters"
-                                }
-                            })}
+                            {...register("password")}
                         />
                         {errors.password && <span className="text-red-500 text-xs ml-1">{errors.password.message}</span>}
                     </div>
 
-                    <button type="submit" className="btn-primary mt-4 w-full">
-                        Create Account
+                    <button type="submit" className={`btn-primary mt-4 w-full ${loading ? 'loading' : ''}`}  disabled={loading}>
+                        {loading ? 'Signing Up...' : 'Sign Up'}
                     </button>
                 </form>
 

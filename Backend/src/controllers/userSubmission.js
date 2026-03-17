@@ -15,6 +15,10 @@ const submitCode = async (req,res)=>{
       if(!userId||!code||!problemId||!language)
         return res.status(400).send("Some field missing");
 
+      if(language==='cpp')
+        language='c++'
+      
+
     //    Fetch the problem from database
        const problem =  await Problem.findById(problemId);
     //    testcases(Hidden)
@@ -117,7 +121,10 @@ const runCode = async(req,res)=>{
    //    Fetch the problem from database
       const problem =  await Problem.findById(problemId);
    //    testcases(Hidden)
-
+    
+   if(language==='cpp')
+        language='c++'
+      
 
    //    Judge0 code ko submit karna hai
 

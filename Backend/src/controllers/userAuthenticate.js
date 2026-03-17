@@ -18,11 +18,24 @@ const register=async (req,res)=>{
     const user = await User.create(req.body);
 
     const token=jwt.sign({_id:user._id , emailId:emailId,role:'user'},process.env.JWT_KEY,{expiresIn:60*60})
+    const reply = {
+        firstName: user.firstName,
+        emailId: user.emailId,
+        _id: user._id,
+        role:user.role,
+    }
+    
     res.cookie('token',token,{maxAge:60*60*1000})
-    res.status(201).send("User registerd successfully")
+    res.status(201).json({
+        user:reply,
+        message:"Loggin Successfully"
+    })
     }
     catch(err){
-        res.status(400).send("Error: "+err);
+        console.log("REGISTER ERROR:", err);
+        res.status(400).json({
+            message: err.message
+        });
     }
 }
 
@@ -47,10 +60,21 @@ const login=async (req,res)=>{
     if(!match)
             throw new Error("Invalid Credentials");
 
+    const reply = {
+        firstName: user.firstName,
+        emailId: user.emailId,
+        _id: user._id,
+        role:user.role,
+    }
+
+
     const token=jwt.sign({_id:user._id , emailId:emailId,role:user.role},process.env.JWT_KEY,{expiresIn:60*60})
     res.cookie('token',token,{maxAge:60*60*1000})
 
-    res.status(200).send("Logged in successfully")
+    res.status(201).json({
+            user:reply,
+            message:"Loggin Successfully"
+        })
 }
 catch(err){
     res.status(401).send("Error: "+err)

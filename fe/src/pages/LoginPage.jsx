@@ -3,14 +3,43 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router';
 import { Terminal } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, NavLink } from 'react-router'; 
+import { loginUser } from "../authSlice";
+import { useEffect, useState } from 'react';
+
+const loginSchema = z.object({
+    emailId: z.string().email("Invalid Email"),
+    password: z.string().min(8, "Password is too weak") 
+  });
+  
 
 export default function LoginPage() {
-    const { register, handleSubmit, formState: { errors } } = useForm();
+    const [showPassword, setShowPassword] = useState(false);
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+    const {
+      register,
+      handleSubmit,
+      formState: { errors },
+    } = useForm({ resolver: zodResolver(loginSchema) }); // Using renamed schema
 
-    const onSubmit = (data) => {
-        console.log("Login Data:", data);
-        // Add login logic here
-    };
+  useEffect(() => {
+    console.log("Auth state changed:", isAuthenticated);
+    if (isAuthenticated) {
+      console.log("✅ User logged in successfully");
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = (data) => {
+    console.log("Submitting login data:", data);
+    dispatch(loginUser(data));
+  };
+ 
 
     return (
         <div className="flex-center min-h-screen pt-20 relative">
@@ -30,10 +59,10 @@ export default function LoginPage() {
                 <form className="flex flex-col gap-4 items-stretch" onSubmit={handleSubmit(onSubmit)}>
                     <div className="flex flex-col items-start gap-1">
                         <input
-                            type="email"
+                            type="emailId"
                             placeholder="Email Address"
-                            className={`input-field w-full ${errors.email ? 'border-red-500' : ''}`}
-                            {...register("email", {
+                            className={`input-field w-full ${errors.emailId ? 'border-red-500' : ''}`}
+                            {...register("emailId", {
                                 required: "Email is required",
                                 pattern: {
                                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -41,7 +70,7 @@ export default function LoginPage() {
                                 }
                             })}
                         />
-                        {errors.email && <span className="text-red-500 text-xs ml-1">{errors.email.message}</span>}
+                        {errors.emailId && <span className="text-red-500 text-xs ml-1">{errors.emailId.message}</span>}
                     </div>
 
                     <div className="flex flex-col items-start gap-1">

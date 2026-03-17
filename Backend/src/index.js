@@ -8,13 +8,13 @@ const authRouter=require('../src/routes/userAuth')
 const redisClient=require('./config/redis') 
 const problemRouter=require('./routes/problemCreator')
 const submitRouter=require('./routes/submit')
-// const cors=require('cors')
+const cors=require('cors')
 const aiRouter=require('./routes/aiChatting')
 
-// app.use(cors({
-//     origin:"http://localhost:5173/",
-//     credentials:true
-// }))
+app.use(cors({
+    origin:["http://localhost:5173" || "http://localhost:5174" ],
+    credentials:true
+}))
 
 app.use(express.json())
 app.use(cookieParser())

@@ -5,7 +5,10 @@ import StarParticles from './components/StarParticles';
 import BackgroundGlow from './components/BackgroundGlow';
 import Footer from './components/Footer';
 import CompanyBanner from './components/CompanyBanner';
-import { AuthProvider } from './context/AuthContext';
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { checkAuth } from "./authSlice";
+import ProtectedRoute from "./components/protectedRoute";
 
 // Lazy load pages for performance optimization
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -32,6 +35,12 @@ function AppContent() {
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
 
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(checkAuth());
+  }, [dispatch]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1">
@@ -40,15 +49,19 @@ function AppContent() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/problems" element={<ProblemsPage />} />
-            <Route path="/problems/:id" element={<EditorPage />} />
-            <Route path="/games" element={<GamesPage />} />
-            <Route path="/discussions" element={<DiscussionPage />} />
-            <Route path="/interview" element={<InterviewPage />} />
-            <Route path="/contests" element={<ContestPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/visualizer" element={<VisualizerPage />} />
+
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/problems" element={<ProblemsPage />} />
+              <Route path="/problems/:id" element={<EditorPage />} />
+              <Route path="/games" element={<GamesPage />} />
+              <Route path="/discussions" element={<DiscussionPage />} />
+              <Route path="/interview" element={<InterviewPage />} />
+              <Route path="/contests" element={<ContestPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/visualizer" element={<VisualizerPage />} />
+              </Route>
           </Routes>
         </Suspense>
       </div>
@@ -64,14 +77,12 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <>
         <StarParticles />
         <BackgroundGlow />
         <Navbar />
         <AppContent />
-      </Router>
-    </AuthProvider>
+        </>
   );
 }
 

@@ -8,7 +8,7 @@ const createProblem = async (req,res)=>{
 
     const {title,description,difficulty,tags,
         visibleTestCases,hiddenTestCases,startCode,
-        referenceSolution, problemCreator
+        referenceSolution
     } = req.body;
 
 
@@ -39,10 +39,10 @@ const createProblem = async (req,res)=>{
         const resultToken = submitResult.map((value)=> value.token);
 
         // ["db54881d-bcf5-4c7b-a2e3-d33fe7e25de7","ecc52a9b-ea80-4a00-ad50-4ab6cc3bb2a1","1b35ec3b-5776-48ef-b646-d5522bdeb2cc"]
-        
+      
        const testResult = await submitToken(resultToken);
 
-      //  console.log(testResult);
+       console.log(testResult);
 
        for(const test of testResult){
         if(test.status_id!=3){
@@ -63,8 +63,9 @@ const createProblem = async (req,res)=>{
       res.status(201).send("Problem Saved Successfully");
     }
     catch(err){
-        res.status(400).send("Error: "+err);
-    }
+      console.error(err);
+      res.status(500).send("Server Error: " + err.message);
+  }
 }
 
 const updateProblem=async(req,res)=>{
