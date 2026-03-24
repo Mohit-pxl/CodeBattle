@@ -155,7 +155,17 @@ const runCode = async(req,res)=>{
 }
 
 
-module.exports = {submitCode,runCode};
+const getUserSubmissions = async (req,res) => {
+    try {
+        const userId = req.result._id;
+        const submissions = await Submission.find({userId}).sort({createdAt: -1}).populate('problemId');
+        res.status(200).send(submissions);
+    } catch(err) {
+        res.status(500).send("Internal Server Error " + err);
+    }
+}
+
+module.exports = {submitCode,runCode,getUserSubmissions};
 
 
 

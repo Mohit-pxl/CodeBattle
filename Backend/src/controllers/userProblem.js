@@ -212,7 +212,7 @@ const submittedProblem=async(req,res)=>{
     const userId=req.result._id;
     const problemId=req.params.pid
 
-    const ans=Submission.find({userId,problemId});
+    const ans=await Submission.find({userId,problemId});
 
     if(ans.length==0)
       res.status(200).send("No Submission is present")

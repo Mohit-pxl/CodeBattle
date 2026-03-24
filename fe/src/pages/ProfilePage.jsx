@@ -1,29 +1,106 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, MapPin, Link as LinkIcon, Edit2, LogOut, Code2, Award, Zap, History, Activity } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { User, Mail, MapPin, Link as LinkIcon, Edit2, LogOut, Code2, Award, Zap, History, Activity, Loader2 } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { logoutUser } from '../authSlice';
 import { useNavigate } from 'react-router';
+import axiosClient from '../utils/axiosClient';
 
 export default function ProfilePage() {
-    const { user, logout } = useAuth();
+    const { user, isAuthenticated } = useSelector(state => state.auth);
+    const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const [submissions, setSubmissions] = useState([]);
+    const [solvedCount, setSolvedCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+
     const handleLogout = () => {
-        logout();
+        dispatch(logoutUser());
         navigate('/login');
     };
 
-    if (!user?.isLoggedIn) {
-        navigate('/login');
+    useEffect(() => {
+        if (!isAuthenticated || !user) {
+            navigate('/login');
+            return;
+        }
+
+        const fetchProfileData = async () => {
+            setLoading(true);
+            try {
+                const [subsRes, solvedRes] = await Promise.all([
+                    axiosClient.get('/submission/user'),
+                    axiosClient.get('/problem/problemSolvedByUser'),
+                ]);
+                setSubmissions(Array.isArray(subsRes.data) ? subsRes.data : []);
+                setSolvedCount(Array.isArray(solvedRes.data) ? solvedRes.data.length : 0);
+            } catch (err) {
+                console.error('Failed to fetch profile data', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfileData();
+    }, [user, isAuthenticated, navigate]);
+
+    if (!isAuthenticated || !user) {
         return null;
     }
 
+    // Compute language proficiency from real submissions
+    const languageStats = (() => {
+        if (!Array.isArray(submissions) || submissions.length === 0) return [];
+        const langMap = {};
+        submissions.forEach(sub => {
+            if (!sub?.language) return;
+            const lang = sub.language;
+            if (!langMap[lang]) langMap[lang] = { total: 0, accepted: 0 };
+            langMap[lang].total++;
+            if (sub.status === 'accepted') langMap[lang].accepted++;
+        });
+
+        const colorMap = {
+            'javascript': 'bg-[#ffca28]',
+            'c++': 'bg-blue-500',
+            'java': 'bg-orange-500',
+            'python': 'bg-yellow-500',
+        };
+        const nameMap = {
+            'javascript': 'JavaScript',
+            'c++': 'C++',
+            'java': 'Java',
+            'python': 'Python',
+        };
+
+        return Object.entries(langMap)
+            .map(([lang, { total, accepted }]) => ({
+                name: nameMap[lang] || lang,
+                level: total > 0 ? Math.round((accepted / total) * 100) : 0,
+                color: colorMap[lang] || 'bg-gray-500',
+                total,
+                accepted,
+            }))
+            .sort((a, b) => b.total - a.total);
+    })();
+
+    const displayName = user.firstName || 'User';
+    const displayEmail = user.emailId || 'user@example.com';
+
     const stats = [
-        { label: 'Solved', value: '142', icon: Code2, color: 'text-green-400' },
-        { label: 'Contests', value: '12', icon: Award, color: 'text-yellow-400' },
-        { label: 'Points', value: '2,450', icon: Zap, color: 'text-blue-400' },
-        { label: 'Rank', value: '#1,204', icon: History, color: 'text-purple-400' },
+        { label: 'Solved', value: solvedCount.toString(), icon: Code2, color: 'text-green-400' },
+        { label: 'Contests', value: '0', icon: Award, color: 'text-yellow-400' },
+        { label: 'Points', value: (solvedCount * 10).toString(), icon: Zap, color: 'text-blue-400' },
+        { label: 'Submits', value: submissions.length.toString(), icon: History, color: 'text-purple-400' },
     ];
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center">
+                <Loader2 size={40} className="animate-spin text-[var(--color-primary)]" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#0B0C10] pt-24 pb-12 px-4 md:px-8">
@@ -47,13 +124,13 @@ export default function ProfilePage() {
                                     </button>
                                 </div>
 
-                                <h2 className="text-xl font-bold text-white mb-1">{user.username}</h2>
-                                <p className="text-[var(--color-slate)] text-sm mb-4">@{user.username.toLowerCase()}</p>
+                                <h2 className="text-xl font-bold text-white mb-1">{displayName}</h2>
+                                <p className="text-[var(--color-slate)] text-sm mb-4">@{displayName.toLowerCase()}</p>
 
                                 <div className="w-full space-y-3 py-4 border-y border-white/5">
                                     <div className="flex items-center gap-3 text-sm text-[var(--color-slate)]">
                                         <Mail size={16} />
-                                        <span>contact@{user.username.toLowerCase()}.dev</span>
+                                        <span>{displayEmail}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm text-[var(--color-slate)]">
                                         <MapPin size={16} />
@@ -61,7 +138,7 @@ export default function ProfilePage() {
                                     </div>
                                     <div className="flex items-center gap-3 text-sm text-[var(--color-slate)] hover:text-white transition-colors cursor-pointer">
                                         <LinkIcon size={16} />
-                                        <span>github.com/{user.username.toLowerCase()}</span>
+                                        <span>github.com/{displayName.toLowerCase()}</span>
                                     </div>
                                 </div>
 
@@ -118,26 +195,26 @@ export default function ProfilePage() {
                             <h3 className="text-lg font-bold text-white mb-6">Language Proficiency</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    {[
-                                        { name: 'C++', level: 85, color: 'bg-blue-500' },
-                                        { name: 'Python', level: 70, color: 'bg-yellow-500' },
-                                        { name: 'JavaScript', level: 92, color: 'bg-[#ffca28]' },
-                                    ].map(lang => (
-                                        <div key={lang.name} className="space-y-1.5">
-                                            <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                                                <span className="text-white">{lang.name}</span>
-                                                <span className="text-[var(--color-slate)]">{lang.level}%</span>
+                                    {languageStats.length > 0 ? (
+                                        languageStats.map(lang => (
+                                            <div key={lang.name} className="space-y-1.5">
+                                                <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                                                    <span className="text-white">{lang.name}</span>
+                                                    <span className="text-[var(--color-slate)]">{lang.level}% ({lang.accepted}/{lang.total})</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${lang.level}%` }}
+                                                        transition={{ duration: 1, delay: 0.5 }}
+                                                        className={`h-full ${lang.color} shadow-[0_0_10px_rgba(255,255,255,0.1)]`}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${lang.level}%` }}
-                                                    transition={{ duration: 1, delay: 0.5 }}
-                                                    className={`h-full ${lang.color} shadow-[0_0_10px_rgba(255,255,255,0.1)]`}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-[var(--color-slate)] italic">No submissions yet. Start solving problems!</p>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center justify-center p-6 bg-white/5 rounded-2xl border border-white/10 border-dashed">
@@ -153,26 +230,36 @@ export default function ProfilePage() {
                         <div className="bg-[#111216] rounded-2xl border border-white/5 p-8 shadow-xl">
                             <h3 className="text-lg font-bold text-white mb-6">Recent Activity</h3>
                             <div className="space-y-6">
-                                {[
-                                    { title: 'Solved "Two Sum"', date: '2 hours ago', difficulty: 'Easy' },
-                                    { title: 'Participated in "Weekly Contest 342"', date: '1 day ago', difficulty: 'Medium' },
-                                    { title: 'Solved "Longest Palindromic Substring"', date: '3 days ago', difficulty: 'Medium' },
-                                ].map((activity, i) => (
-                                    <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 group cursor-pointer">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-                                                <History size={18} className="text-green-500" />
+                                {Array.isArray(submissions) && submissions.length > 0 ? (
+                                    submissions.slice(0, 5).map((activity, i) => (
+                                        <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 group cursor-pointer">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${activity?.status === 'accepted' ? 'bg-green-500/10 group-hover:bg-green-500/20' : 'bg-red-500/10 group-hover:bg-red-500/20'}`}>
+                                                    <History size={18} className={activity?.status === 'accepted' ? 'text-green-500' : 'text-red-500'} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-white font-medium group-hover:text-[var(--color-primary)] transition-colors">{activity?.problemId?.title || 'Unknown Problem'}</h4>
+                                                    <p className="text-xs text-[var(--color-slate)]">
+                                                        {activity?.createdAt ? new Date(activity.createdAt).toLocaleDateString() : 'Unknown Date'}
+                                                        {activity?.language ? ` · ${activity.language}` : ''}
+                                                        {activity?.testCasesPassed !== undefined && activity?.testCasesTotal ? ` · ${activity.testCasesPassed}/${activity.testCasesTotal} passed` : ''}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="text-white font-medium group-hover:text-[var(--color-primary)] transition-colors">{activity.title}</h4>
-                                                <p className="text-xs text-[var(--color-slate)]">{activity.date}</p>
-                                            </div>
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${
+                                                activity?.status === 'accepted' 
+                                                    ? 'bg-green-500/10 text-green-400' 
+                                                    : activity?.status === 'error' 
+                                                        ? 'bg-red-500/10 text-red-400' 
+                                                        : 'bg-yellow-500/10 text-yellow-400'
+                                            }`}>
+                                                {activity?.status}
+                                            </span>
                                         </div>
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded bg-white/5 text-[var(--color-slate)]`}>
-                                            {activity.difficulty}
-                                        </span>
-                                    </div>
-                                ))}
+                                    ))
+                                ) : (
+                                    <div className="text-[var(--color-slate)] italic text-sm">No recent activity. Start solving!</div>
+                                )}
                             </div>
                         </div>
 
@@ -212,6 +299,15 @@ export default function ProfilePage() {
                                 // Create 53 weeks to cover the year
                                 const months = [];
                                 let currentMonth = -1;
+                                const submissionMap = {};
+                                if (Array.isArray(submissions)) {
+                                    submissions.forEach(sub => {
+                                        if (!sub || !sub.createdAt) return;
+                                        const date = new Date(sub.createdAt);
+                                        const dStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                                        submissionMap[dStr] = (submissionMap[dStr] || 0) + 1;
+                                    });
+                                }
 
                                 for (let i = 0; i < 371; i++) {
                                     const d = new Date(startSunday);
@@ -229,15 +325,10 @@ export default function ProfilePage() {
                                         currentMonth = m;
                                     }
 
-                                    // Mock activity data
                                     let count = 0;
                                     if (!isFuture && !isOutsideYear) {
-                                        const dayOfMonth = d.getDate();
-                                        const dayOfWeek = d.getDay();
-                                        if ((dayOfMonth % 3 === 0 || m % 2 === 0) && dayOfWeek !== 0 && dayOfWeek !== 6) {
-                                            count = Math.floor((Math.sin(i * 0.1) + 1) * 3);
-                                        }
-                                        if (d > new Date(today.getTime() - 20 * 24 * 60 * 60 * 1000)) count += 2;
+                                        const dStr = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                                        count = submissionMap[dStr] || 0;
                                     }
 
                                     const levels = ['bg-white/5', 'bg-green-500/20', 'bg-green-500/40', 'bg-green-500/60', 'bg-green-500/80'];

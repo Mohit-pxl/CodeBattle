@@ -75,6 +75,12 @@ async function fetchData() {
 
  const result =  await fetchData();
 
+  if (!result || !result.submissions) {
+    console.error("Judge0 result is undefined or malformed, retrying...");
+    await waiting(1000);
+    continue;
+  }
+
   const IsResultObtained =  result.submissions.every((r)=>r.status_id>2);
 
   if(IsResultObtained)

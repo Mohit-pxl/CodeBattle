@@ -1,62 +1,119 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Send, ChevronLeft, Settings, TerminalSquare, FileText, CheckCircle2, History, MessageSquare, Bot, User, X } from 'lucide-react';
+import { Play, Send, ChevronLeft, Settings, TerminalSquare, FileText, CheckCircle2, History, MessageSquare, Bot, User, X, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { EditorPageSkeleton } from '../components/Shimmer';
+import axiosClient from '../utils/axiosClient';
+import Confetti from 'react-confetti';
+import { useWindowSize } from 'react-use';
 
 export default function EditorPage() {
     const { id } = useParams();
     const [isLoading, setIsLoading] = useState(true);
+    const [problem, setProblem] = useState(null);
+    const { width, height } = useWindowSize();
+    const [showConfetti, setShowConfetti] = useState(false);
 
     useEffect(() => {
-        const t = setTimeout(() => setIsLoading(false), 1000);
-        return () => clearTimeout(t);
+        let isMounted = true;
+        const fetchProblem = async () => {
+            try {
+                const res = await axiosClient.get(`/problem/problemById/${id}`);
+                if (isMounted) {
+                    setProblem(res.data);
+                    if (res.data.startCode && res.data.startCode.length > 0) {
+                        const initial = res.data.startCode.find(s => s.language === 'c++' || s.language === 'cpp' || s.language === 'C++');
+                        if (initial) setCode(initial.initialCode);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        fetchProblem();
+        return () => { isMounted = false; };
     }, [id]);
 
     // UI State
     const [leftTab, setLeftTab] = useState('description');
     const [language, setLanguage] = useState('C++');
-    const [code, setCode] = useState('class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        \n    }\n};');
-    const [consoleOutput, setConsoleOutput] = useState('');
-    const [showConsole, setShowConsole] = useState(false);
+    const [code, setCode] = useState('');
+    const [testResults, setTestResults] = useState(null);
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [executionType, setExecutionType] = useState('run');
+    
     const [showChatAi, setShowChatAi] = useState(false);
     const [chatMessages, setChatMessages] = useState([
         { id: 1, role: 'ai', text: 'Hello! I am your AI coding assistant. How can I help you with this problem?' }
     ]);
     const [userMessage, setUserMessage] = useState('');
 
-    // Mock actions
-    const handleRun = () => {
-        setShowConsole(true);
-        setConsoleOutput('Running...\n\nStatus: Accepted\nRuntime: 12 ms\nMemory: 10.4 MB\n\nTestcases passed: 3/3');
+    const handleRun = async () => {
+        setLeftTab('result');
+        setIsExecuting(true);
+        setExecutionType('run');
+        setTestResults(null);
+        try {
+            const res = await axiosClient.post(`/submission/run/${id}`, { code, language: languageMap[language] });
+            setTestResults({ type: 'run', data: res.data });
+        } catch (err) {
+            setTestResults({ type: 'error', data: err.response?.data || err.message });
+        } finally {
+            setIsExecuting(false);
+        }
     };
 
-    const handleSubmit = () => {
-        setShowConsole(true);
-        setConsoleOutput('Submitting code...\n\nSuccess!\nStatus: Accepted\nRuntime: 8 ms (Beats 95% of users with C++)\nMemory: 10.2 MB');
+    const handleSubmit = async () => {
+        setLeftTab('result');
+        setIsExecuting(true);
+        setExecutionType('submit');
+        setTestResults(null);
+        try {
+            const res = await axiosClient.post(`/submission/submit/${id}`, { code, language: languageMap[language] });
+            const result = res.data;
+            setTestResults({ type: 'submit', data: result });
+            
+            if (result.status === 'accepted') {
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 5000);
+            }
+        } catch (err) {
+            setTestResults({ type: 'error', data: err.response?.data || err.message });
+        } finally {
+            setIsExecuting(false);
+        }
     };
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!userMessage.trim()) return;
 
         const newMessage = { id: Date.now(), role: 'user', text: userMessage };
-        setChatMessages([...chatMessages, newMessage]);
+        setChatMessages(prev => [...prev, newMessage]);
         setUserMessage('');
 
-        // Mock AI response
-        setTimeout(() => {
+        try {
+            const res = await axiosClient.post('/ai/chat', { prompt: userMessage });
             setChatMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 role: 'ai',
-                text: "That's a great question! For the Two Sum problem, using a hash map is usually the most efficient approach."
+                text: res.data?.message || "I'm sorry, I couldn't process your request."
             }]);
-        }, 1000);
+        } catch(err) {
+            setChatMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                role: 'ai',
+                text: "Error communicating with AI Assistant."
+            }]);
+        }
     };
 
     const languageMap = {
-        'C++': 'cpp',
+        'C++': 'c++',
         'Java': 'java',
         'Python3': 'python',
         'JavaScript': 'javascript',
@@ -90,7 +147,7 @@ export default function EditorPage() {
                         <ChevronLeft size={16} /> Back to Problems
                     </Link>
                     <div className="h-4 w-px bg-white/20"></div>
-                    <span className="font-semibold text-white">Problem {id}: Two Sum</span>
+                    <span className="font-semibold text-white truncate max-w-[200px] md:max-w-xs">{problem?.title || `Problem ${id}`}</span>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -135,6 +192,7 @@ export default function EditorPage() {
                             { id: 'editorial', icon: TerminalSquare, label: 'Editorial' },
                             { id: 'solution', icon: CheckCircle2, label: 'Solutions' },
                             { id: 'submissions', icon: History, label: 'Submissions' },
+                            { id: 'result', icon: TerminalSquare, label: 'Test Result' },
                             { id: 'chatai', icon: Bot, label: 'AI Chat' }
                         ].map(tab => (
                             <button
@@ -169,29 +227,27 @@ export default function EditorPage() {
                             >
                                 {leftTab === 'description' && (
                                     <div className="prose prose-invert max-w-none">
-                                        <h2 className="text-2xl font-bold text-white mb-4">1. Two Sum</h2>
+                                        <h2 className="text-2xl font-bold text-white mb-4">{problem?.title || 'Problem Title'}</h2>
                                         <div className="flex gap-2 mb-6">
-                                            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-500/10 text-green-500 border border-green-500/20">Easy</span>
-                                            <span className="px-2 py-0.5 rounded text-xs text-[var(--color-slate)] bg-white/5">Array</span>
-                                            <span className="px-2 py-0.5 rounded text-xs text-[var(--color-slate)] bg-white/5">Hash Table</span>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${problem?.difficulty === 'easy' ? 'bg-green-500/10 text-green-500 border-green-500/20' : problem?.difficulty === 'medium' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'} uppercase`}>
+                                                {problem?.difficulty || 'Medium'}
+                                            </span>
+                                            {problem?.tags?.map(tag => (
+                                                <span key={tag} className="px-2 py-0.5 rounded text-xs text-[var(--color-slate)] bg-white/5 capitalize">{tag}</span>
+                                            ))}
                                         </div>
-                                        <p className="mb-4">Given an array of integers <code>nums</code> and an integer <code>target</code>, return <em>indices of the two numbers such that they add up to <code>target</code></em>.</p>
-                                        <p className="mb-4">You may assume that each input would have <strong><em>exactly</em> one solution</strong>, and you may not use the <em>same</em> element twice.</p>
-                                        <p className="mb-6">You can return the answer in any order.</p>
+                                        <div className="mb-6 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: problem?.description || '' }}></div>
 
-                                        <h3 className="text-lg font-semibold text-white mt-6 mb-2">Example 1:</h3>
-                                        <div className="bg-[#1A1C23] p-4 rounded-lg border border-white/5 font-mono text-sm mb-4">
-                                            <p className="mb-1"><strong className="text-white">Input:</strong> nums = [2,7,11,15], target = 9</p>
-                                            <p className="mb-1"><strong className="text-white">Output:</strong> [0,1]</p>
-                                            <p><strong className="text-white">Explanation:</strong> Because nums[0] + nums[1] == 9, we return [0, 1].</p>
-                                        </div>
-
-                                        <h3 className="text-lg font-semibold text-white mt-6 mb-2">Constraints:</h3>
-                                        <ul className="list-disc pl-5 space-y-2">
-                                            <li><code>2 &lt;= nums.length &lt;= 10<sup>4</sup></code></li>
-                                            <li><code>-10<sup>9</sup> &lt;= nums[i] &lt;= 10<sup>9</sup></code></li>
-                                            <li><code>-10<sup>9</sup> &lt;= target &lt;= 10<sup>9</sup></code></li>
-                                        </ul>
+                                        <h3 className="text-lg font-semibold text-white mt-6 mb-2">Examples:</h3>
+                                        {problem?.visibleTestCases?.map((tc, idx) => (
+                                            <div key={idx} className="bg-[#1A1C23] p-4 rounded-lg border border-white/5 font-mono text-sm mb-4">
+                                                <p className="mb-1"><strong className="text-white">Input:</strong> {tc.input}</p>
+                                                <p className="mb-1"><strong className="text-white">Output:</strong> {tc.output}</p>
+                                                {tc.explanation && (
+                                                    <p><strong className="text-white">Explanation:</strong> {tc.explanation}</p>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                                 {leftTab === 'editorial' && (
@@ -213,6 +269,112 @@ export default function EditorPage() {
                                     <div className="text-[var(--color-slate)]">
                                         <h2 className="text-xl font-bold text-white mb-4">Your Submissions</h2>
                                         <p>You have no past submissions for this problem.</p>
+                                    </div>
+                                )}
+                                {leftTab === 'result' && (
+                                    <div className="text-[var(--color-slate)]">
+                                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                            <TerminalSquare className="text-[var(--color-primary)]" /> Execution Result
+                                        </h2>
+                                        
+                                        {isExecuting ? (
+                                            <div className="flex flex-col items-center justify-center py-20">
+                                                <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mb-4"></div>
+                                                <p className="text-white font-medium">{executionType === 'run' ? 'Running Code...' : 'Evaluating Submission...'}</p>
+                                                <p className="text-xs text-[var(--color-slate)] mt-2">Connecting to secure executing space</p>
+                                            </div>
+                                        ) : !testResults ? (
+                                            <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                                                <Play size={48} className="text-[var(--color-slate)] mb-4" />
+                                                <p>Run or Submit your code to see results here.</p>
+                                            </div>
+                                        ) : testResults.type === 'error' ? (
+                                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6">
+                                                <h3 className="text-red-500 font-bold mb-2">Execution Error</h3>
+                                                <pre className="text-red-400 text-sm whitespace-pre-wrap font-mono">{typeof testResults.data === 'string' ? testResults.data : JSON.stringify(testResults.data)}</pre>
+                                            </div>
+                                        ) : testResults.type === 'run' ? (
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${testResults.data?.every(t => t.status_id === 3) ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                                                        {testResults.data?.every(t => t.status_id === 3) ? 'Accepted' : 'Failed'}
+                                                    </span>
+                                                    <span className="text-sm font-medium">{testResults.data?.filter(t => t.status_id === 3).length || 0} / {testResults.data?.length || 0} Testcases Passed</span>
+                                                </div>
+                                                
+                                                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                                    {testResults.data && testResults.data.map((test, i) => (
+                                                        <div key={i} className={`p-5 rounded-2xl border transition-all duration-300 hover:shadow-lg ${test.status_id === 3 ? 'bg-green-500/5 border-green-500/20 hover:border-green-500/40' : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'}`}>
+                                                            <div className="flex justify-between items-center mb-4">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={`p-1.5 rounded-lg ${test.status_id === 3 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                                                        {test.status_id === 3 ? <CheckCircle size={14} className="text-green-500" /> : <XCircle size={14} className="text-red-500" />}
+                                                                    </div>
+                                                                    <h4 className="font-bold text-white text-base">Test Case {i + 1}</h4>
+                                                                </div>
+                                                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-md ${test.status_id === 3 ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                                                                    {test.status_id === 3 ? 'Passed' : 'Failed'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-4 text-sm font-mono">
+                                                                <div className="bg-[#0B0C10] p-3.5 rounded-xl border border-white/5 flex flex-col">
+                                                                    <span className="text-[10px] text-[var(--color-slate)] mb-1 uppercase tracking-widest font-bold opacity-60">Time</span>
+                                                                    <span className="text-white font-semibold">{test.time || '0.000'}s</span>
+                                                                </div>
+                                                                <div className="bg-[#0B0C10] p-3.5 rounded-xl border border-white/5 flex flex-col">
+                                                                    <span className="text-[10px] text-[var(--color-slate)] mb-1 uppercase tracking-widest font-bold opacity-60">Memory</span>
+                                                                    <span className="text-white font-semibold">{test.memory || '0'} KB</span>
+                                                                </div>
+                                                            </div>
+                                                            {(test.stderr || test.compile_output) && (
+                                                                <div className="mt-4 bg-[#0B0C10] p-4 rounded-xl border border-red-500/20">
+                                                                    <div className="flex items-center gap-2 mb-2 text-red-400 font-bold text-[10px] uppercase tracking-widest">
+                                                                        <AlertCircle size={12} /> Error Output
+                                                                    </div>
+                                                                    <pre className="text-red-300 text-xs whitespace-pre-wrap font-mono leading-relaxed">{test.stderr || test.compile_output}</pre>
+                                                                </div>
+                                                            )}
+                                                            {test.stdout && (
+                                                                <div className="mt-4 bg-[#0B0C10] p-4 rounded-xl border border-white/5">
+                                                                    <span className="text-[10px] text-[var(--color-slate)] mb-2 block uppercase tracking-widest font-bold opacity-60">Standard Output</span>
+                                                                    <pre className="text-white/90 text-xs whitespace-pre-wrap font-mono leading-relaxed">{test.stdout}</pre>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-6">
+                                                <div className={`p-6 rounded-2xl border ${testResults.data.status === 'accepted' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                                                    <h3 className={`text-2xl font-black mb-2 uppercase tracking-tight ${testResults.data.status === 'accepted' ? 'text-green-500' : 'text-red-500'}`}>
+                                                        {testResults.data.status}
+                                                    </h3>
+                                                    
+                                                    <div className="grid grid-cols-3 gap-4 mt-6">
+                                                        <div className="bg-[#0B0C10] p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center">
+                                                            <span className="text-[10px] text-[var(--color-slate)] font-bold uppercase tracking-widest mb-1">Runtime</span>
+                                                            <span className="text-[1.2rem] sm:text-xl font-bold text-white">{testResults.data.runtime || '0'}s</span>
+                                                        </div>
+                                                        <div className="bg-[#0B0C10] p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center">
+                                                            <span className="text-[10px] text-[var(--color-slate)] font-bold uppercase tracking-widest mb-1">Memory</span>
+                                                            <span className="text-[1.2rem] sm:text-xl font-bold text-white">{testResults.data.memory || '0'} KB</span>
+                                                        </div>
+                                                        <div className="bg-[#0B0C10] p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center">
+                                                            <span className="text-[10px] text-[var(--color-slate)] font-bold uppercase tracking-widest mb-1">Testcases</span>
+                                                            <span className="text-[1.2rem] sm:text-xl font-bold text-white">{testResults.data.testCasesPassed} / {testResults.data.testCasesTotal}</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {testResults.data.errorMessage && (
+                                                        <div className="mt-6 bg-[#0B0C10] p-4 rounded-xl border border-red-500/20 overflow-x-auto">
+                                                            <span className="text-xs text-red-500 font-bold mb-2 block uppercase tracking-wider">Error Details</span>
+                                                            <pre className="text-red-400 text-sm whitespace-pre-wrap font-mono uppercase">{testResults.data.errorMessage}</pre>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </motion.div>
@@ -246,33 +408,7 @@ export default function EditorPage() {
                             />
                         </div>
                     </div>
-
-                    {/* Console Panel (Collapsible) */}
-                    <div className={`border-t border-white/5 bg-[#0B0C10] flex flex-col transition-all duration-300 ${showConsole ? 'h-64' : 'h-10'}`}>
-                        <div
-                            className="flex items-center justify-between px-4 h-10 cursor-pointer hover:bg-white/5"
-                            onClick={() => setShowConsole(!showConsole)}
-                        >
-                            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                                <TerminalSquare size={16} className={showConsole ? 'text-[var(--color-primary)]' : ''} />
-                                Console
-                            </div>
-                            <span className="text-xs text-white/40">{showConsole ? 'Close' : 'Open'}</span>
-                        </div>
-
-                        {showConsole && (
-                            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar font-mono text-sm">
-                                {consoleOutput ? (
-                                    <pre className="text-green-400 whitespace-pre-wrap">{consoleOutput}</pre>
-                                ) : (
-                                    <div className="text-white/40 italic">Run your code to see output here.</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
                 </div>
-
                 <AnimatePresence>
                     {showChatAi && (
                         <motion.div
@@ -334,6 +470,7 @@ export default function EditorPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+                {showConfetti && <Confetti width={width} height={height} recycle={false} numberOfPieces={500} gravity={0.15} colors={['#e63946', '#f1faee', '#a8dadc', '#457b9d', '#1d3557']} />}
             </div>
         </div>
     );
