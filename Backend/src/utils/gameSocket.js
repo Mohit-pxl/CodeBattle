@@ -206,18 +206,29 @@ const initGameSocket = (io) => {
         // ─────────────────────────────────────────────
         socket.on('game:join-room', async ({ roomId }) => {
             try {
+                if (!roomId) return socket.emit('game:error', { message: 'Room ID is required' });
                 const game = await Game.findOne({ roomId: roomId.toUpperCase() });
                 if (!game) return socket.emit('game:error', { message: 'Room not found' });
                 if (game.status === 'finished') return socket.emit('game:error', { message: 'Game already finished' });
 
-                socket.join(roomId.toUpperCase());
-
-                // Update socketId for this player
-                const player = game.players.find(p => p.userId.toString() === user._id.toString());
-                if (player) {
+                // Ensure player exists for private waiting rooms even if REST join was skipped/failed
+                let player = game.players.find(p => p.userId.toString() === user._id.toString());
+                if (!player && game.roomType === 'private' && game.status === 'waiting' && game.players.length < 2) {
+                    game.players.push({
+                        userId: user._id,
+                        username: user.firstName + (user.lastName ? ' ' + user.lastName : ''),
+                        socketId: socket.id,
+                    });
+                    await game.save();
+                    player = game.players[game.players.length - 1];
+                } else if (player) {
                     player.socketId = socket.id;
                     await game.save();
+                } else {
+                    return socket.emit('game:error', { message: 'Room is full or inaccessible' });
                 }
+
+                socket.join(roomId.toUpperCase());
 
                 socket.emit('game:room-joined', {
                     roomId: game.roomId,
@@ -229,6 +240,7 @@ const initGameSocket = (io) => {
                 io.to(game.roomId).emit('game:player-joined', {
                     username: user.firstName,
                     playerCount: game.players.length,
+                    players: game.players.map(p => ({ userId: p.userId, username: p.username })),
                 });
 
                 // If 2 players and room is active with a problem, start timer
@@ -257,7 +269,13 @@ const initGameSocket = (io) => {
                     return socket.emit('game:error', { message: 'Only the host can start the game' });
                 }
 
-                const problem = await pickRandomProblem();
+                let problem = null;
+                if (game.problem) {
+                    problem = await Problem.findById(game.problem);
+                }
+                if (!problem) {
+                    problem = await pickRandomProblem();
+                }
                 const gameDuration = duration || game.duration;
 
                 game.status = 'active';

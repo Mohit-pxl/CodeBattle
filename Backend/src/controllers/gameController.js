@@ -22,7 +22,7 @@ const getRandomProblem = async (req, res) => {
 // POST /game/create - Create a private room
 const createRoom = async (req, res) => {
     try {
-        const { duration = 600 } = req.body;
+        const { duration = 600, problemId } = req.body;
         const user = req.result;
 
         let roomId = generateRoomId();
@@ -35,6 +35,7 @@ const createRoom = async (req, res) => {
             roomId,
             roomType: 'private',
             duration,
+            problem: problemId || null,
             players: [{
                 userId: user._id,
                 username: user.firstName + (user.lastName ? ' ' + user.lastName : ''),

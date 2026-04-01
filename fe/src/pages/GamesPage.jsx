@@ -7,14 +7,16 @@ import {
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { io } from 'socket.io-client';
-import axiosClient from '../utils/axiosClient';
+import axiosClient, { API_BASE_URL } from '../utils/axiosClient';
 import { useSelector } from 'react-redux';
+
+const GAME_SOCKET_URL = `${API_BASE_URL}/game`;
 
 // ─── Socket singleton ──────────────────────────────────────────────────────────
 let socket = null;
 const getSocket = () => {
     if (!socket) {
-        socket = io('http://localhost:3001/game', {
+        socket = io(GAME_SOCKET_URL, {
             withCredentials: true,
             autoConnect: false,
         });
@@ -37,6 +39,12 @@ const difficultyColor = {
 
 const LANGUAGE_MODES = { cpp: 'cpp', java: 'java', python3: 'python' };
 
+const getApiErrorMessage = (err, fallback) => {
+    const data = err?.response?.data;
+    if (typeof data === 'string') return data;
+    return data?.message || err?.message || fallback;
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 export default function GamesPage() {
     const user = useSelector(s => s.auth?.user);
@@ -50,6 +58,10 @@ export default function GamesPage() {
     const [roomId, setRoomId] = useState('');
     const [generatedRoomId, setGeneratedRoomId] = useState('');
     const [selectedDuration, setSelectedDuration] = useState(600);
+    const [problems, setProblems] = useState([]);
+    const [selectedProblemId, setSelectedProblemId] = useState('');
+    const [problemSearch, setProblemSearch] = useState('');
+    const [showProblemDropdown, setShowProblemDropdown] = useState(false);
     const [copied, setCopied] = useState(false);
     const [roomLoading, setRoomLoading] = useState(false);
 
@@ -72,6 +84,13 @@ export default function GamesPage() {
     languageRef.current = language;
     const gameRoomRef = useRef(null);
 
+    // Fetch problems for private room
+    useEffect(() => {
+        axiosClient.get("/problem/getAllProblem")
+            .then(res => setProblems(res.data))
+            .catch(err => console.error("Error fetching problems:", err));
+    }, []);
+
     // ── Connect Socket ─────────────────────────────────────────────────────────
     useEffect(() => {
         const s = getSocket();
@@ -91,7 +110,10 @@ export default function GamesPage() {
             setGameData(prev => ({ ...prev, roomId, players }));
         });
 
-        s.on('game:player-joined', ({ username, playerCount }) => {
+        s.on('game:player-joined', ({ username, playerCount, players }) => {
+            if (players?.length) {
+                setGameData(prev => ({ ...prev, players }));
+            }
             setError('');
         });
 
@@ -200,13 +222,16 @@ export default function GamesPage() {
         setRoomLoading(true);
         setError('');
         try {
-            const res = await axiosClient.post('/game/create', { duration: selectedDuration });
+            const res = await axiosClient.post('/game/create', { 
+                duration: selectedDuration,
+                problemId: selectedProblemId || undefined 
+            });
             const id = res.data.roomId;
             setGeneratedRoomId(id);
             // Join the socket room immediately
             getSocket().emit('game:join-room', { roomId: id });
         } catch (e) {
-            setError(e.response?.data?.message || 'Failed to create room');
+            setError(getApiErrorMessage(e, 'Failed to create room'));
         } finally {
             setRoomLoading(false);
         }
@@ -222,7 +247,7 @@ export default function GamesPage() {
             getSocket().emit('game:join-room', { roomId });
             setGameData(prev => ({ ...prev, roomId }));
         } catch (e) {
-            setError(e.response?.data?.message || 'Failed to join room');
+            setError(getApiErrorMessage(e, 'Failed to join room'));
         } finally {
             setRoomLoading(false);
         }
@@ -288,12 +313,14 @@ export default function GamesPage() {
     // ── Derived ───────────────────────────────────────────────────────────────
     const me = gameData?.players?.find(p => user && p.userId === user._id);
     const opponent = gameData?.players?.find(p => !user || p.userId !== user._id);
+    const privateRoomPlayerCount = gameData?.players?.length || 0;
     const timeWarning = gameTime <= 60 && gameTime > 0;
+    const isInGame = gameState === 'ingame';
 
     // ══════════════════════════════════════════════════════════════════════════
     return (
-        <div className="min-h-screen pt-24 pb-12 bg-transparent text-white px-6">
-            <div className="max-w-6xl mx-auto">
+        <div className={`bg-transparent text-white ${isInGame ? 'h-screen pt-20' : 'min-h-screen pt-24 pb-12 px-6'}`}>
+            <div className={isInGame ? 'h-full flex flex-col px-4 md:px-6 pb-4' : 'max-w-6xl mx-auto'}>
 
                 {/* Connection indicator */}
                 <div className="flex justify-end mb-2">
@@ -400,6 +427,9 @@ export default function GamesPage() {
                                                             </button>
                                                         </div>
                                                         <p className="text-xs text-[var(--color-slate)] text-center">Share this ID with your friend</p>
+                                                        <p className="text-xs text-[var(--color-slate)] text-center">
+                                                            Players in room: {privateRoomPlayerCount}/2
+                                                        </p>
 
                                                         {/* Duration selector */}
                                                         <div className="space-y-2">
@@ -422,20 +452,71 @@ export default function GamesPage() {
                                                         </div>
                                                         <button
                                                             onClick={handleStartPrivateRoom}
-                                                            className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm transition-all shadow-lg hover:shadow-blue-600/20"
+                                                            disabled={privateRoomPlayerCount < 2}
+                                                            className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 rounded-lg font-bold text-sm transition-all shadow-lg hover:shadow-blue-600/20 disabled:shadow-none"
                                                         >
-                                                            Start Game
+                                                            {privateRoomPlayerCount < 2 ? 'Waiting for 2nd player...' : 'Start Game'}
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button
-                                                        onClick={handleCreateRoom}
-                                                        disabled={roomLoading}
-                                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors text-sm font-semibold disabled:opacity-50"
-                                                    >
-                                                        {roomLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                                                        Generate Room ID
-                                                    </button>
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2 relative">
+                                                            <p className="text-xs text-[var(--color-slate)] font-bold uppercase tracking-wider">Select Problem</p>
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Search for a problem or leave blank for Random"
+                                                                    value={problemSearch}
+                                                                    onChange={(e) => {
+                                                                        setProblemSearch(e.target.value);
+                                                                        if (!showProblemDropdown) setShowProblemDropdown(true);
+                                                                    }}
+                                                                    onFocus={() => setShowProblemDropdown(true)}
+                                                                    onBlur={() => setTimeout(() => setShowProblemDropdown(false), 200)}
+                                                                    className="w-full bg-[#1A1C23] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
+                                                                />
+                                                                {showProblemDropdown && (
+                                                                    <div className="absolute z-10 w-full mt-1 bg-[#1A1C23] border border-white/10 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                                        <div 
+                                                                            className="px-3 py-2 text-sm text-white hover:bg-white/5 cursor-pointer"
+                                                                            onClick={() => {
+                                                                                setSelectedProblemId('');
+                                                                                setProblemSearch('');
+                                                                                setShowProblemDropdown(false);
+                                                                            }}
+                                                                        >
+                                                                            Random Problem
+                                                                        </div>
+                                                                        {problems
+                                                                            .filter(p => p.title.toLowerCase().includes(problemSearch.toLowerCase()))
+                                                                            .map(p => (
+                                                                                <div 
+                                                                                    key={p._id} 
+                                                                                    className="px-3 py-2 text-sm text-white hover:bg-white/5 cursor-pointer flex justify-between"
+                                                                                    onClick={() => {
+                                                                                        setSelectedProblemId(p._id);
+                                                                                        setProblemSearch(p.title);
+                                                                                        setShowProblemDropdown(false);
+                                                                                    }}
+                                                                                >
+                                                                                    <span>{p.title}</span>
+                                                                                    <span className="text-xs text-[var(--color-slate)] capitalize">{p.difficulty}</span>
+                                                                                </div>
+                                                                            ))
+                                                                        }
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={handleCreateRoom}
+                                                            disabled={roomLoading}
+                                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors text-sm font-semibold disabled:opacity-50"
+                                                        >
+                                                            {roomLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                                            Generate Room ID
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -521,7 +602,7 @@ export default function GamesPage() {
                             key="ingame"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="h-[calc(100vh-180px)] flex flex-col gap-4"
+                            className="flex-1 min-h-0 flex flex-col gap-4"
                         >
                             {/* Header bar */}
                             <div className="flex justify-between items-center bg-[#1A1C23] p-3 rounded-xl border border-white/5 gap-4 flex-wrap">
