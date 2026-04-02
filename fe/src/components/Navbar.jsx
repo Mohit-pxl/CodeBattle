@@ -73,10 +73,9 @@ export default function Navbar() {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex gap-8 items-center font-medium text-[var(--color-slate)] text-[0.95rem]">
                 <Link to="/problems" className="nav-link">Problems</Link>
-                <Link to="/contests" className="nav-link">Contests</Link>
                 <Link to="/games" className="nav-link">Games</Link>
                 <Link to="/interview" className="nav-link">Interview</Link>
-                <Link to="/discussions" className="nav-link">Discussions</Link>
+                <Link to="/blog" className="nav-link">Blog</Link>
                 <Link to="/visualizer" className="nav-link flex items-center gap-1.5 text-[var(--color-primary)]">
                     <Activity size={16} /> Visualizer
                 </Link>
@@ -157,10 +156,9 @@ export default function Navbar() {
                 <div className="absolute top-[100%] left-0 w-full bg-[#0B0C10] border-b border-white/10 p-6 flex flex-col gap-6 lg:hidden shadow-2xl">
                     <div className="flex flex-col gap-4 text-[1.1rem] font-medium text-[var(--color-slate)]">
                         <Link to="/problems" className="nav-link">Problems</Link>
-                        <Link to="/contests" className="nav-link">Contests</Link>
                         <Link to="/games" className="nav-link">Games</Link>
                         <Link to="/interview" className="hover:text-white transition-colors">Interview</Link>
-                        <Link to="/discussions" className="hover:text-white transition-colors">Discussions</Link>
+                        <Link to="/blog" className="hover:text-white transition-colors">Blog</Link>
                         <Link to="/visualizer" className="flex items-center gap-2 text-[var(--color-primary)]">
                             <Activity size={18} /> Visualizer
                         </Link>

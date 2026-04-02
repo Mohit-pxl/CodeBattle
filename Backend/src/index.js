@@ -14,6 +14,7 @@ const cors = require('cors');
 const aiRouter = require('./routes/aiChatting');
 const gameRouter = require('./routes/game');
 const initGameSocket = require('./utils/gameSocket');
+const blogRouter=require("../src/routes/blogRoutes");
 
 app.use(cors({
     origin: ["http://localhost:5173", "http://localhost:5174"],
@@ -28,7 +29,7 @@ app.use('/problem', problemRouter);
 app.use('/submission', submitRouter);
 app.use('/ai', aiRouter);
 app.use('/game', gameRouter);
-
+app.use('/blog', blogRouter);
 // Create HTTP server and attach Socket.io
 const httpServer = http.createServer(app);
 
