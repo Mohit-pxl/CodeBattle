@@ -12,7 +12,7 @@ export default function Footer() {
                         <span className="text-xl font-bold text-[var(--color-white)]">Codebattle</span>
                     </Link>
                     <p className="text-[var(--color-slate)] text-[0.9rem] leading-relaxed">
-                        The ultimate platform to build your coding skills, compete in contests, and prepare for technical interviews.
+                        The ultimate platform to build your coding skills, collaborate, and compete in contests.
                     </p>
                 </div>
 
@@ -21,7 +21,6 @@ export default function Footer() {
                         <h4 className="text-[var(--color-white)] text-[1.1rem] mb-2">Platform</h4>
                         <Link to="/problems" className="footer-link">Problems</Link>
                         <Link to="/contest" className="footer-link">Contest</Link>
-                        <Link to="/interview" className="footer-link">Interview</Link>
                     </div>
                     <div className="flex flex-col gap-3">
                         <h4 className="text-[var(--color-white)] text-[1.1rem] mb-2">Community</h4>

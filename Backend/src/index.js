@@ -11,7 +11,6 @@ const redisClient = require('./config/redis');
 const problemRouter = require('./routes/problemCreator');
 const submitRouter = require('./routes/submit');
 const cors = require('cors');
-const aiRouter = require('./routes/aiChatting');
 const gameRouter = require('./routes/game');
 const initGameSocket = require('./utils/gameSocket');
 const blogRouter=require("../src/routes/blogRoutes");
@@ -27,7 +26,6 @@ app.use(cookieParser());
 app.use('/user', authRouter);
 app.use('/problem', problemRouter);
 app.use('/submission', submitRouter);
-app.use('/ai', aiRouter);
 app.use('/game', gameRouter);
 app.use('/blog', blogRouter);
 // Create HTTP server and attach Socket.io

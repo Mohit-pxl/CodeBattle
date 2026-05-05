@@ -74,7 +74,6 @@ export default function Navbar() {
             <div className="hidden lg:flex gap-8 items-center font-medium text-[var(--color-slate)] text-[0.95rem]">
                 <Link to="/problems" className="nav-link">Problems</Link>
                 <Link to="/games" className="nav-link">Games</Link>
-                <Link to="/interview" className="nav-link">Interview</Link>
                 <Link to="/blog" className="nav-link">Blog</Link>
                 <Link to="/visualizer" className="nav-link flex items-center gap-1.5 text-[var(--color-primary)]">
                     <Activity size={16} /> Visualizer
@@ -157,7 +156,6 @@ export default function Navbar() {
                     <div className="flex flex-col gap-4 text-[1.1rem] font-medium text-[var(--color-slate)]">
                         <Link to="/problems" className="nav-link">Problems</Link>
                         <Link to="/games" className="nav-link">Games</Link>
-                        <Link to="/interview" className="hover:text-white transition-colors">Interview</Link>
                         <Link to="/blog" className="hover:text-white transition-colors">Blog</Link>
                         <Link to="/visualizer" className="flex items-center gap-2 text-[var(--color-primary)]">
                             <Activity size={18} /> Visualizer

@@ -14,11 +14,6 @@ const features = [
         description: "Compete globally in real-time, improve your rating, and climb the leaderboard."
     },
     {
-        icon: <Target size={32} color="var(--color-primary)" />,
-        title: "Mock Interviews",
-        description: "Simulate real interview environments with peers to build confidence under pressure."
-    },
-    {
         icon: <Users size={32} color="var(--color-primary)" />,
         title: "Active Community",
         description: "Discuss solutions, write articles, and connect with developers who share your passion."
@@ -33,7 +28,7 @@ export default function FeaturesSection() {
                     Everything you need to <span className="text-[var(--color-primary)]">succeed</span>
                 </h2>
                 <p className="text-[1.2rem] text-[var(--color-slate)] max-w-[600px] mx-auto leading-relaxed">
-                    Whether you are a beginner learning to code or an expert preparing for an interview, Codebattle has the tools.
+                    Whether you are a beginner learning to code or an expert preparing to challenge others, Codebattle has the tools.
                 </p>
             </div>
 

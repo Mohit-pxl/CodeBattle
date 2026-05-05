@@ -21,7 +21,6 @@ const VisualizerPage = lazy(() => import('./pages/VisualizerPage'));
 const GamesPage = lazy(() => import('./pages/GamesPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
 const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage'));
-const InterviewPage = lazy(() => import('./pages/InterviewPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 const LoadingFallback = () => (
@@ -59,7 +58,6 @@ function AppContent() {
               <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:id" element={<BlogDetailPage />} />
 
-              <Route path="/interview" element={<InterviewPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/visualizer" element={<VisualizerPage />} />
               </Route>
