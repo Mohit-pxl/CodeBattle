@@ -16,7 +16,7 @@ const initGameSocket = require('./utils/gameSocket');
 const blogRouter=require("../src/routes/blogRoutes");
 
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["http://localhost:5173", "http://localhost:5174","https://code-battle-alpha.vercel.app/"],
     credentials: true,
 }));
 
@@ -33,7 +33,7 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
     cors: {
-        origin: ["http://localhost:5173", "http://localhost:5174"],
+        origin: ["http://localhost:5173", "http://localhost:5174","https://code-battle-alpha.vercel.app/"],
         credentials: true,
     },
 });

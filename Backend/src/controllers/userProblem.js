@@ -36,6 +36,11 @@ const createProblem = async (req,res)=>{
         const submitResult = await submitBatch(submissions);
         // console.log(submitResult);
 
+        if(!Array.isArray(submitResult)) {
+          console.error('submitBatch returned non-array in createProblem:', submitResult);
+          return res.status(500).send("Judge0 returned unexpected response");
+        }
+
         const resultToken = submitResult.map((value)=> value.token);
 
         // ["db54881d-bcf5-4c7b-a2e3-d33fe7e25de7","ecc52a9b-ea80-4a00-ad50-4ab6cc3bb2a1","1b35ec3b-5776-48ef-b646-d5522bdeb2cc"]
@@ -100,6 +105,11 @@ const updateProblem=async(req,res)=>{
 
         const submitResult = await submitBatch(submissions);
         // console.log(submitResult);
+
+        if(!Array.isArray(submitResult)) {
+          console.error('submitBatch returned non-array in updateProblem:', submitResult);
+          return res.status(500).send("Judge0 returned unexpected response");
+        }
 
         const resultToken = submitResult.map((value)=> value.token);
 
@@ -177,11 +187,7 @@ const getAllProblem = async(req,res)=>{
      
     const getProblem = await Problem.find({}).select('_id title difficulty tags');
 
-   if(getProblem.length==0)
-    return res.status(404).send("Problem is Missing");
-
-
-   res.status(200).send(getProblem);
+   res.status(200).send(getProblem || []);
   }
   catch(err){
     res.status(500).send("Error: "+err);
@@ -199,9 +205,12 @@ const solvedAllProblembyUser=async(req,res)=>{
       
      })
 
-     res.status(200).send(user.problemSolved);
+     if (!user) return res.status(404).send("User not found");
+
+     res.status(200).send(user.problemSolved || []);
   }
   catch(err){
+    console.error(err);
     res.status(500).send("Server Error");
   }
 

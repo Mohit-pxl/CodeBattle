@@ -5,7 +5,9 @@ const getLanguageById=(lang)=>{
      const language = {
         "c++":54,
         "java":62,
-        "javascript":63
+        "javascript":63,
+        "python":71,
+        "go":60
     }
 
     return language[lang.toLowerCase()];
@@ -34,9 +36,14 @@ const options = {
 async function fetchData() {
 	try {
 		const response = await axios.request(options);
-		return response.data;
+		const data = response.data;
+		// Judge0 may return a flat array or { submissions: [...] }
+		if (Array.isArray(data)) return data;
+		if (data && Array.isArray(data.submissions)) return data.submissions;
+		throw new Error('Unexpected response format from Judge0: ' + JSON.stringify(data));
 	} catch (error) {
-		console.error(error);
+		console.error('submitBatch error:', error.message);
+		throw error;
 	}
 }
 

@@ -10,17 +10,17 @@ const submitCode = async (req,res)=>{
        const userId = req.result._id;
        const problemId = req.params.id;
 
-       const {code,language} = req.body;
+       const {code,language: rawLanguage} = req.body;
 
-      if(!userId||!code||!problemId||!language)
+      if(!userId||!code||!problemId||!rawLanguage)
         return res.status(400).send("Some field missing");
 
-      if(language==='cpp')
-        language='c++'
+      const language = rawLanguage === 'cpp' ? 'c++' : rawLanguage;
       
 
     //    Fetch the problem from database
        const problem =  await Problem.findById(problemId);
+       if(!problem) return res.status(404).send("Problem not found");
     //    testcases(Hidden)
 
     //   Kya apne submission store kar du pehle....
@@ -30,14 +30,18 @@ const submitCode = async (req,res)=>{
           code,
           language,
           status:'pending',
-          testCasesTotal:problem.hiddenTestCases.length
+          testCasesTotal: (problem.hiddenTestCases || []).length
         })
 
     //    Judge0 code ko submit karna hai
 
     const languageId = getLanguageById(language);
+    if(!languageId) return res.status(400).send("Unsupported language: " + language);
 
-    const submissions = problem.hiddenTestCases.map((testcase)=>({
+    const hiddenTests = problem.hiddenTestCases || [];
+    if(hiddenTests.length === 0) return res.status(400).send("No hidden test cases found for this problem");
+
+    const submissions = hiddenTests.map((testcase)=>({
         source_code:code,
         language_id: languageId,
         stdin: testcase.input,
@@ -47,6 +51,11 @@ const submitCode = async (req,res)=>{
 
     const submitResult = await submitBatch(submissions);
     
+    if(!Array.isArray(submitResult)) {
+      console.error('submitBatch returned non-array:', submitResult);
+      return res.status(500).send("Judge0 returned unexpected response");
+    }
+
     const resultToken = submitResult.map((value)=> value.token);
 
     const testResult = await submitToken(resultToken);
@@ -100,6 +109,7 @@ const submitCode = async (req,res)=>{
        
     }
     catch(err){
+      console.error('submitCode error:', err);
       res.status(500).send("Internal Server Error "+ err);
     }
 
@@ -113,24 +123,28 @@ const runCode = async(req,res)=>{
       const userId = req.result._id;
       const problemId = req.params.id;
 
-      const {code,language} = req.body;
+      const {code,language: rawLanguage} = req.body;
 
-     if(!userId||!code||!problemId||!language)
+     if(!userId||!code||!problemId||!rawLanguage)
        return res.status(400).send("Some field missing");
+
+     const language = rawLanguage === 'cpp' ? 'c++' : rawLanguage;
 
    //    Fetch the problem from database
       const problem =  await Problem.findById(problemId);
-   //    testcases(Hidden)
-    
-   if(language==='cpp')
-        language='c++'
+      if(!problem) return res.status(404).send("Problem not found");
+   //    testcases(Visible)
       
 
    //    Judge0 code ko submit karna hai
 
    const languageId = getLanguageById(language);
+   if(!languageId) return res.status(400).send("Unsupported language: " + language);
 
-   const submissions = problem.visibleTestCases.map((testcase)=>({
+   const visibleTests = problem.visibleTestCases || [];
+   if(visibleTests.length === 0) return res.status(400).send("No visible test cases found for this problem");
+
+   const submissions = visibleTests.map((testcase)=>({
        source_code:code,
        language_id: languageId,
        stdin: testcase.input,
@@ -140,6 +154,11 @@ const runCode = async(req,res)=>{
 
    const submitResult = await submitBatch(submissions);
    
+   if(!Array.isArray(submitResult)) {
+     console.error('submitBatch returned non-array:', submitResult);
+     return res.status(500).send("Judge0 returned unexpected response");
+   }
+
    const resultToken = submitResult.map((value)=> value.token);
 
    const testResult = await submitToken(resultToken);

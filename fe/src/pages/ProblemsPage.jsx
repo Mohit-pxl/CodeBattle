@@ -66,11 +66,14 @@ export default function ProblemsPage() {
           axiosClient.get("/problem/problemSolvedByUser"),
         ]);
 
+        const allProblemsData = Array.isArray(allProblemsRes.data) ? allProblemsRes.data : [];
+        const solvedProblemsData = Array.isArray(solvedProblemsRes.data) ? solvedProblemsRes.data : [];
+
         const solvedIds = new Set(
-          (solvedProblemsRes.data || []).map((item) => item._id),
+          solvedProblemsData.map((item) => item._id),
         );
 
-        const mappedProblems = (allProblemsRes.data || []).map((problem) =>
+        const mappedProblems = allProblemsData.map((problem) =>
           mapProblem(problem, solvedIds),
         );
 
@@ -78,9 +81,10 @@ export default function ProblemsPage() {
           setProblems(mappedProblems);
         }
       } catch (error) {
+        console.error("Error loading problems:", error);
         if (isMounted) {
           setFetchError(
-            error.response?.data || "Failed to fetch problems from backend.",
+            error.response?.data?.message || error.response?.data || error.message || "Failed to fetch problems from backend.",
           );
         }
       } finally {
